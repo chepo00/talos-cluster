@@ -1,0 +1,58 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: renovate
+    namespace: dev
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: renovate
+            version: 1.21.0
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    values:
+        configmap:
+            config:
+                enabled: 'true'
+                data:
+                    config.json: |-
+                        {}
+        persistence:
+            renovate-tmp:
+                enabled: true
+                type: emptyDir
+                defaultMode: "0777"
+                mountPath: /tmp/renovate
+            renovate-log-dir:
+                enabled: true
+                mountPath: /tmp/renovate/logs/
+                path: '${NFS_CONTAINERS_DATA}/renovate/'
+                server: '${NFS_SERVER}'
+                type: nfs
+        workload:
+            main:
+                enabled: true
+                podSpec:
+                    containers:
+                        main:
+                            env:
+                                RENOVATE_GIT_AUTHOR: 'Renovate Bot <renovate@${DOMAIN_0}>'
+                                # Configure gitea
+                                RENOVATE_PLATFORM: 'gitea'
+                                RENOVATE_ENDPOINT: 'http://gitea.dev.svc.cluster.local:10037/api/v1'
+                                RENOVATE_TOKEN: '${GITEA_PAT}'
+                                RENOVATE_AUTODISCOVER: 'true'
+                                # Disable GITHUB
+                                GITHUB_COM_TOKEN: ''
+                                RENOVATE_GITHUB_TOKEN_WARN: 'false'
+                                RENOVATE_BASE_DIR: ''
+                                # Configure log output
+                                LOGLEVEL: debug
+                                LOG_FILE: /tmp/renovate/logs/renovate.json
+                                # Misc config values
+                                RENOVATE_PR_HOURLY_LIMIT: 0
+                                RENOVATE_ASSIGNEES_FROM_CODE_OWNERS: 'true'
+                                RENOVATE_REVIEWERS_FROM_CODE_OWNERS: 'true'

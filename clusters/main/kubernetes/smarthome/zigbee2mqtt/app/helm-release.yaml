@@ -1,0 +1,60 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: zigbee2mqtt
+    namespace: smarthome
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: zigbee2mqtt
+            version: 14.2.2
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    values:
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: zigbee2mqtt.${DOMAIN_0}
+                      paths:
+                          - path: /
+                            pathType: Prefix
+                integrations:
+                    certManager:
+                        certificateIssuer: '${DOMAIN_0_BASE}-prod'
+                        enabled: true
+                    homepage:
+                        enabled: true
+                        group: Smart Home
+                    traefik:
+                        enabled: true
+                        entrypoints:
+                            - websecure
+                        middlewares:
+                            - name: auth
+                              namespace: traefik
+        persistence:
+            data:
+                enabled: true
+                mountPath: /data
+                path: '${NFS_CONTAINERS_DATA}/zigbee2mqtt/data'
+                server: '${NFS_SERVER}'
+                type: nfs
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            env:
+                                ZIGBEE2MQTT_CONFIG_MQTT_SERVER: 'mqtt://mosquitto.smarthome.svc.cluster.local'
+                                ZIGBEE2MQTT_CONFIG_SERIAL_PORT: '${ZIGBEE2MQTT_CONFIG_SERIAL_PORT}'
+                                ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER: '${ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER}'
+                                ZIGBEE2MQTT_CONFIG_MQTT_USER: '${DEFAULT_USER}'
+                                ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: '${MQTT_PASSWORD}'
+        securityContext:
+            container:
+                capabilities:
+                    add: ['NET_BIND_SERVICE']

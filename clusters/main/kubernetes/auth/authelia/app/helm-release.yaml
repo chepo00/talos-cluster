@@ -1,0 +1,133 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: authelia
+    namespace: auth
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: authelia
+            version: 26.4.8
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    values:
+        theme: dark
+        access_control:
+            default_policy: one_factor
+            rules:
+                - domain:
+                      - mflix.${DOMAIN_0}
+                  domain_regex: []
+                  networks:
+                      - 172.16.0.0/16
+                      - 172.17.0.0/16
+                      - '${BASE_IP}.0/24'
+                  policy: bypass
+                  resources:
+                      - ^/memUsage
+                  subject: []
+                - domain:
+                      - mflix.${DOMAIN_0}
+                  domain_regex: []
+                  networks: []
+                  policy: bypass
+                  resources:
+                      - ^/xtream/live/
+                      - ^/assets/
+                  subject: []
+        authentication_backend:
+            disable_reset_password: false
+            file:
+                enabled: false
+            ldap:
+                enabled: true
+                implementation: custom
+                url: ldap://lldap-ldap.auth.svc.cluster.local:3890
+                base_dn: DC=ldap,DC=${DOMAIN_0_BASE},DC=${DOMAIN_0_EXTENSION}
+                username_attribute: uid
+                additional_users_dn: ou=people
+                users_filter: (&(|({username_attribute}={input})({mail_attribute}={input}))(objectClass=person))
+                additional_groups_dn: ou=groups
+                groups_filter: (member={dn})
+                group_name_attribute: cn
+                mail_attribute: mail
+                display_name_attribute: displayName
+                user: uid=admin,ou=people,DC=ldap,DC=${DOMAIN_0_BASE},DC=${DOMAIN_0_EXTENSION}
+                plain_password: ${LDAP_PASSWORD}
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: auth.${DOMAIN_0}
+                integrations:
+                    certManager:
+                        certificateIssuer: '${DOMAIN_0_BASE}-prod'
+                        enabled: true
+                    homepage:
+                       enabled: true
+                       group: System
+                    traefik:
+                        enabled: true
+                required: true
+        cnpg:
+            main:
+                cluster:
+                    instances: 1
+                    singleNode: true
+                enabled: true
+                hibernate: false
+                database: authelia
+                user: authelia
+                password: ${CNPG_PASSWORD}
+        default_redirection_url: https://auth.${DOMAIN_0}
+        domain: ${DOMAIN_0}
+        identity_providers:
+            oidc:
+                access_token_lifespan: 1h
+                authorize_code_lifespan: 1m
+                clients:
+                    - audience: []
+                      authorization_policy: one_factor
+                      consent_mode: auto
+                      description: Cloudflare ZeroTrust
+                      grant_types:
+                          - refresh_token
+                          - authorization_code
+                      id: cloudflare
+                      public: false
+                      redirect_uris:
+                          - https://${DOMAIN_0_BASE}.cloudflareaccess.com/cdn-cgi/access/callback
+                      require_pkce: false
+                      response_modes:
+                          - form_post
+                          - query
+                          - fragment
+                      response_types:
+                          - code
+                      scopes:
+                          - openid
+                          - profile
+                          - email
+                      secret: letmein
+                      token_endpoint_auth_method: client_secret_basic
+                      userinfo_signing_algorithm: none
+                enable_client_debug_messages: false
+                enabled: true
+                id_token_lifespan: 1h
+                minimum_parameter_entropy: 8
+                refresh_token_lifespan: 90m
+        notifier:
+            smtp:
+                enabled: true
+                timeout: 30s
+                host: ${SMTP_HOST}
+                plain_password: ${SMTP_PASSWORD}
+                port: ${SMTP_PORT}
+                sender: ${DOMAIN_0_EMAIL}
+                startup_check_address: ${DOMAIN_0_EMAIL}
+                username: ${DOMAIN_0_EMAIL}
+            filesystem:
+                enabled: false
