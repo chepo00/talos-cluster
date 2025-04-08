@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: route-idrac
+    namespace: routers
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: external-service
+            version: 15.6.2
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+    values:
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: idrac.${DOMAIN_0}
+                integrations:
+                    certManager:
+                        certificateIssuer: '${DOMAIN_0_BASE}-prod'
+                        enabled: true
+                    traefik:
+                        enabled: true
+                        entrypoints:
+                            - websecure
+        service:
+            main:
+                enabled: true
+                type: ExternalIP
+                externalIP: '${BASE_IP}.4'
+                ports:
+                    main:
+                        enabled: true
+                        port: 443
+                        protocol: https

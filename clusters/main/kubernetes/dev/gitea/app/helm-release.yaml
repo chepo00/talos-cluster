@@ -1,0 +1,117 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gitea
+  namespace: dev
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: gitea
+      version: 20.12.14
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+  values:
+    credentials:
+      CFR2:
+        accessKey: '${S3_ACCESS_KEY}'
+        bucket: '${S3_BUCKET}'
+        name: CFR2
+        secretKey: '${S3_SECRET_KEY}'
+        type: s3
+        url: '${S3_URL}'
+        encrKey: '${S3_ENCR_KEY}'
+    cnpg:
+      main:
+        cluster:
+          instances: 1
+          singleNode: true
+        password: ${CNPG_PASSWORD}
+        mode: recovery
+        backups:
+          credentials: CFR2
+          enabled: true
+          revision: "1"
+          scheduledBackups:
+            - name: daily-backup
+              schedule: '0 0 2 * * *'
+              backupOwnerReference: self
+              immediate: true
+              suspend: false
+        recovery:
+          method: object_store
+          credentials: CFR2
+    config:
+      ALLOWED_HOST_LIST: 127.0.0.1
+      APP_NAME: Gitea
+      RUN_MODE: prod
+      nodeIP: '${GITEA_IP}'
+    ingress:
+      main:
+        enabled: true
+        hosts:
+          - host: gitea.${DOMAIN_0}
+            paths:
+              - path: /
+                pathType: Prefix
+        integrations:
+          certManager:
+            certificateIssuer: '${DOMAIN_0_BASE}-prod'
+            enabled: true
+          homepage:
+            enabled: true
+            group: Dev
+            widget:
+              custom:
+                key: '${GITEA_HOMEPAGE_TOKEN}'
+              enabled: true
+          traefik:
+            enabled: true
+            entrypoints:
+              - websecure
+    customConfig:
+      - keys:
+          - name: ENABLED
+            value: 'true'
+          - name: FROM
+            value: gitea@${DOMAIN_0}
+          - name: SMTP_ADDR
+            value: ${SMTP_HOST}
+          - name: PORT
+            value: ${SMTP_PORT}
+          - name: USER
+            value: ${DOMAIN_0_EMAIL}
+          - name: PASSWD
+            value: ${SMTP_PASSWORD}
+        name: mailer
+    admin:
+      email: 'admin${DOMAIN_0_EMAIL}'
+      password: ${GITEA_PASSWORD}
+      username: 'admin${DEFAULT_USER}'
+    persistence:
+      data:
+        autoPermissions:
+          enabled: false
+        enabled: true
+        mountPath: /data
+        path: '${NFS_CONTAINERS_DATA}/gitea'
+        readOnly: false
+        server: '${NFS_SERVER}'
+        targetSelectAll: true
+        type: nfs
+    service:
+      main:
+        enabled: true
+        loadBalancerIP: '${GITEA_IP}'
+        type: LoadBalancer
+      ssh:
+        enabled: true
+        loadBalancerIP: '${GITEA_IP}'
+        ports:
+          ssh:
+            enabled: true
+            port: 2222
+            targetPort: 2222
+        type: LoadBalancer

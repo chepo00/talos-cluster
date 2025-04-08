@@ -1,0 +1,93 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden
+  namespace: auth
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: vaultwarden
+      version: 28.8.3
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+  values:
+    cnpg:
+      main:
+        password: ${CNPG_PASSWORD}
+        user: vaultwarden
+        mode: recovery
+        backups:
+          credentials: CFR2
+          enabled: true
+          revision: "1"
+          scheduledBackups:
+            - name: daily-backup
+              schedule: '0 0 2 * * *'
+              backupOwnerReference: self
+              immediate: true
+              suspend: false
+        recovery:
+          # revision: "1"
+          method: object_store
+          credentials: CFR2
+    credentials:
+      CFR2:
+        accessKey: '${S3_ACCESS_KEY}'
+        bucket: '${S3_BUCKET}'
+        name: CFR2
+        secretKey: '${S3_SECRET_KEY}'
+        type: s3
+        url: '${S3_URL}'
+        encrKey: '${S3_ENCR_KEY}'
+    ingress:
+      main:
+        enabled: true
+        hosts:
+          - host: vaultwarden.${DOMAIN_0}
+            paths:
+              - path: /
+                pathType: Prefix
+        integrations:
+          certManager:
+            certificateIssuer: '${DOMAIN_0_BASE}-prod'
+            enabled: true
+          homepage:
+            enabled: true
+            group: System
+          traefik:
+            allowCors: false
+            enabled: true
+            entrypoints:
+              - websecure
+    vaultwarden:
+      admin:
+        disableAdminToken: false
+        enabled: true
+        token: ${VAULTWARDEN_PASSWORD}
+      allowInvitation: true
+      defaultInviteName: Vault hosted by ${DEFAULT_USER}
+      enableWebVault: true
+      icons:
+        cache: 0
+      orgCreationUsers: all
+      push:
+        enabled: false
+        installationId: ${BWPUSHID}
+        installationKey: ${BWPUSHKEY}
+      requireEmail: true
+      showPasswordHint: true
+      signupwhitelistenable: false
+      smtp:
+        authMechanism: Plain
+        enabled: true
+        from: alerts@${DOMAIN_0}
+        fromName: Vaultwarden
+        host: ${SMTP_HOST}
+        password: ${SMTP_PASSWORD}
+        port: ${SMTP_PORT}
+        security: force_tls
+        user: ${DOMAIN_0_EMAIL}
+      verifySignup: false
