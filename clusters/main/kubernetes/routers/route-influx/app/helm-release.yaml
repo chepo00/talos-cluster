@@ -1,7 +1,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-    name: route-nas
+    name: route-influx
     namespace: routers
 spec:
     interval: 15m
@@ -18,7 +18,7 @@ spec:
             main:
                 enabled: true
                 hosts:
-                    - host: nas.${DOMAIN_0}
+                    - host: influx.${DOMAIN_0}
                 integrations:
                     certManager:
                         certificateIssuer: '${DOMAIN_0_BASE}-prod'
@@ -31,9 +31,9 @@ spec:
             main:
                 enabled: true
                 type: ExternalIP
-                externalIP: '${BASE_IP}.2'
+                externalIP: '${BASE_IP}.253'
                 ports:
                     main:
                         enabled: true
-                        port: 81
+                        port: 8086
                         protocol: http

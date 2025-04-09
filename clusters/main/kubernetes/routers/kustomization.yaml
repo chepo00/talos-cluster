@@ -7,7 +7,7 @@ resources:
     - route-idrac/ks.yaml
     - route-fileserver/ks.yaml
     - route-freebox/ks.yaml
-    - route-nas/ks.yaml
+    - route-influx/ks.yaml
     - route-portainer/ks.yaml
     - route-proxmox/ks.yaml
     - route-vpn/ks.yaml
