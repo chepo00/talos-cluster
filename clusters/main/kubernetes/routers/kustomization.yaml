@@ -8,6 +8,7 @@ resources:
     - route-fileserver/ks.yaml
     - route-freebox/ks.yaml
     - route-influx/ks.yaml
+    - route-netdata/ks.yaml
     - route-portainer/ks.yaml
     - route-proxmox/ks.yaml
     - route-vpn/ks.yaml
