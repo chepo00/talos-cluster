@@ -1,0 +1,110 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: ntfy
+    namespace: misc
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: ntfy
+            version: 11.5.1
+            sourceRef:
+                kind: HelmRepository
+                name: truecharts
+                namespace: flux-system
+            interval: 15m
+    values:
+        ingress:
+            main:
+                enabled: true
+                hosts:
+                    - host: ntfy.${DOMAIN_0}
+                integrations:
+                    certManager:
+                        certificateIssuer: "${DOMAIN_0_BASE}-prod"
+                        enabled: true
+                    # homepage:
+                    #     enabled: true
+                    #     group: System
+                    traefik:
+                        enabled: true
+                        # entrypoints:
+                        #     - websecure
+                        # middlewares:
+                        #     - name: auth
+                        #       namespace: traefik
+        persistence:
+            config:
+                # maybe add NFS share
+                enabled: true
+                mountPath: "/etc/ntfy"
+        workload:
+            main:
+                podSpec:
+                    containers:
+                        main:
+                            env:
+                                NTFY_LISTEN_HTTP: ":{{ .Values.service.main.ports.main.port }}"
+                                # User Defined
+                                NTFY_BASE_URL: "https://ntfy.${DOMAIN_0}"
+                                NTFY_BEHIND_PROXY: true
+                                ENABLE_FIREBASE_FILE: false
+                                ENABLE_CACHE_FILE: false
+                                ENABLE_ATTACHMENT_CACHE_DIR: false
+                                ENABLE_AUTH_FILE: false
+                                NTFY_ENABLE_METRICS: "{{ .Values.metrics.main.enabled }}"
+                                NTFY_UPSTREAM_BASE_URL: "https://ntfy.sh"
+                                # NTFY_CACHE_DURATION: "12h"
+                                # NTFY_KEEPALIVE_INTERVAL: "45s"
+                                # NTFY_MANAGER_INTERVAL: "1m"
+                                # NTFY_GLOBAL_TOPIC_LIMIT: 15000
+                                # NTFY_VISITOR_SUBSCRIPTION_LIMIT: 30
+                                # NTFY_VISITOR_ATTACHMENT_TOTAL_SIZE_LIMIT: "100M"
+                                # NTFY_VISITOR_ATTACHMENT_DAILY_BANDWIDTH_LIMIT: "500M"
+                                # NTFY_VISITOR_REQUEST_LIMIT_BURST: 60
+                                # NTFY_VISITOR_REQUEST_LIMIT_REPLENISH: "5s"
+                                # NTFY_VISITOR_REQUEST_LIMIT_EXEMPT_HOSTS: ""
+                                # NTFY_VISITOR_EMAIL_LIMIT_BURST: 16
+                                # NTFY_VISITOR_EMAIL_LIMIT_REPLENISH: "1h"
+                                # NTFY_ATTACHMENT_TOTAL_SIZE_LIMIT: "5G"
+                                # NTFY_ATTACHMENT_FILE_SIZE_LIMIT: "15M"
+                                # NTFY_ATTACHMENT_EXPIRY_DURATION: "3h"
+                                # NTFY_AUTH_DEFAULT_ACCESS: "read-write"
+                                NTFY_SMTP_SENDER_ADDR: "${SMTP_HOST}:${SMTP_PORT}"
+                                NTFY_SMTP_SENDER_USER: "${DOMAIN_0_EMAIL}"
+                                NTFY_SMTP_SENDER_PASS: "${SMTP_PASSWORD}"
+                                NTFY_SMTP_SENDER_FROM: "noreply@${DOMAIN_0}"
+                                NTFY_SMTP_SERVER_LISTEN: ":${SMTP_PORT}"
+                                NTFY_SMTP_SERVER_DOMAIN: "${DOMAIN_0}"
+                                NTFY_SMTP_SERVER_ADDR_PREFIX: "ntfy-"
+                    # envFrom:
+                    #   - configMapRef:
+                    #       name: "ntfy"
+        # metrics:
+        #   main:
+        #     # -- Enable and configure a Prometheus serviceMonitor for the chart under this key.
+        #     # @default -- See values.yaml
+        #     enabled: false
+        #     type: "servicemonitor"
+        #     endpoints:
+        #       - port: main
+        #         path: /metrics
+        #     # -- Enable and configure Prometheus Rules for the chart under this key.
+        #     # @default -- See values.yaml
+        #     prometheusRule:
+        #       enabled: false
+        #       labels: {}
+        #       # -- Configure additionial rules for the chart under this key.
+        #       # @default -- See prometheusrules.yaml
+        #       rules: []
+        #       # - alert: UnifiPollerAbsent
+        #       #   annotations:
+        #       #     description: Unifi Poller has disappeared from Prometheus service discovery.
+        #       #     summary: Unifi Poller is down.
+        #       #   expr: |
+        #       #     absent(up{job=~".*unifi-poller.*"} == 1)
+        #       #   for: 5m
+        #       #   labels:
+        #       #     severity: critical
+        #       #   name: Unifi Poller is down
