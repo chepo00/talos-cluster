@@ -21,7 +21,7 @@ spec:
                     - host: vpn.${DOMAIN_0}
                 integrations:
                     certManager:
-                        certificateIssuer: '${DOMAIN_0_BASE}-prod'
+                        certificateIssuer: "${DOMAIN_0_BASE}-prod"
                         enabled: true
                     traefik:
                         enabled: true
@@ -34,7 +34,7 @@ spec:
             main:
                 enabled: true
                 type: ExternalIP
-                externalIP: '${BASE_IP}.253'
+                externalIP: "${BASE_IP}.5"
                 ports:
                     main:
                         enabled: true
