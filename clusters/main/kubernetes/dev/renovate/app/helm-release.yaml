@@ -40,7 +40,7 @@ spec:
         workload:
             main:
                 enabled: true
-                schedule: "0 * * * *"
+                schedule: "0 15 * * *"
                 podSpec:
                     containers:
                         main:
